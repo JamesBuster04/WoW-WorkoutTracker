@@ -1,7 +1,7 @@
 ## Interface: 120100
 ## Title: WoW Workout Tracker
 ## Author: JamesBuster
-## Version: 1.1.3
+## Version: 1.2.0
 ## Notes: Auto-track deaths in Mythic+ dungeons and calculate workout tiers. BigWigs/LittleWigs boss wipe + keystone level tracking.
 ## SavedVariables: WorkoutTrackerDB
 

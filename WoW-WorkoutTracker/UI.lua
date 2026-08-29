@@ -1,8 +1,11 @@
 local addon = _G["WorkoutTracker"]
 
+local MIN_WIDTH, MIN_HEIGHT = 320, 420
+local MAX_WIDTH, MAX_HEIGHT = 900, 900
+
 function addon:CreateUI()
     local f = CreateFrame("Frame", "WorkoutTrackerFrame", UIParent, "BackdropTemplate")
-    f:SetSize(420, 560)
+    f:SetSize(WorkoutTrackerDB.frameWidth or 420, WorkoutTrackerDB.frameHeight or 560)
     f:SetPoint("CENTER")
     f:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -16,9 +19,37 @@ function addon:CreateUI()
     f:SetBackdropBorderColor(0.4, 0.4, 0.4)
     f:EnableMouse(true)
     f:SetMovable(true)
+    f:SetResizable(true)
+    f:SetResizeBounds(MIN_WIDTH, MIN_HEIGHT, MAX_WIDTH, MAX_HEIGHT)
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
+
+    -- Resize grip in the bottom-right corner - drag to resize independently
+    -- of the whole-frame drag (which moves it). Standard Blizzard chat-frame
+    -- sizing textures so it matches the native look.
+    local resizer = CreateFrame("Button", nil, f)
+    resizer:SetSize(16, 16)
+    resizer:SetPoint("BOTTOMRIGHT", -4, 4)
+    resizer:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    resizer:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+    resizer:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+    resizer:SetScript("OnMouseDown", function()
+        f:StartSizing("BOTTOMRIGHT")
+    end)
+    resizer:SetScript("OnMouseUp", function()
+        f:StopMovingOrSizing()
+    end)
+
+    -- Fires on any size change (drag-resize in progress, or the final
+    -- StopMovingOrSizing) - reflow wrap-width text and persist the size
+    -- here rather than only in the grip's OnMouseUp, so a resize is never
+    -- lost even if mouse capture is released oddly.
+    f:SetScript("OnSizeChanged", function(self, width, height)
+        WorkoutTrackerDB.frameWidth = width
+        WorkoutTrackerDB.frameHeight = height
+        self:ReflowWidths()
+    end)
 
     -- Title
     local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -53,7 +84,6 @@ function addon:CreateUI()
     -- Last boss wipe detail (boss name + remaining health %)
     local lastWipeLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     lastWipeLabel:SetPoint("TOPLEFT", 10, -118)
-    lastWipeLabel:SetWidth(400)
     lastWipeLabel:SetJustifyH("LEFT")
     f.lastWipeLabel = lastWipeLabel
 
@@ -81,7 +111,6 @@ function addon:CreateUI()
     -- Boss mod integration status footer
     local statusLabel = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     statusLabel:SetPoint("BOTTOMLEFT", 10, 45)
-    statusLabel:SetWidth(400)
     statusLabel:SetJustifyH("LEFT")
     f.statusLabel = statusLabel
 
@@ -103,6 +132,15 @@ function addon:CreateUI()
     resetBtn:SetPoint("BOTTOMLEFT", 200, 10)
     resetBtn:SetText("Reset")
     resetBtn:SetScript("OnClick", function() addon:ResetSession() end)
+
+    -- Recompute wrap widths for text elements that need to reflow when the
+    -- frame is resized (fixed-width fields would otherwise stay clipped to
+    -- their original size or leave dead space after a resize).
+    function f:ReflowWidths()
+        local contentWidth = self:GetWidth() - 20 -- 10px padding each side
+        lastWipeLabel:SetWidth(contentWidth)
+        statusLabel:SetWidth(contentWidth)
+    end
 
     function f:Update()
         dungeonLabel:SetText("Dungeon: " .. (WorkoutTrackerDB.currentDungeon or "None"))
@@ -150,5 +188,6 @@ function addon:CreateUI()
     end
 
     self.mainFrame = f
+    f:ReflowWidths()
     f:Update()
 end

@@ -21,6 +21,8 @@ local defaults = {
     keystoneLevel = nil,
     lastBossWipeName = nil,
     lastBossWipeHealthPct = nil,
+    frameWidth = 420,
+    frameHeight = 560,
 }
 
 -- Workout tiers

@@ -188,6 +188,8 @@ WorkoutTrackerDB = {
     keystoneLevel = nil,          -- current M+ level, nil if none active
     lastBossWipeName = nil,       -- boss name from the most recent auto-tracked wipe
     lastBossWipeHealthPct = nil,  -- lowest boss health % seen at that wipe (nil if unavailable)
+    frameWidth = 420,             -- persisted window width, restored on next login/reload
+    frameHeight = 560,            -- persisted window height, restored on next login/reload
 }
 ```
 
@@ -199,7 +201,7 @@ Stored in `WTF/Account/<ACCOUNT>/SavedVariables/WoW-WorkoutTracker.lua`, written
 - **Keystone level is display-only.** It's captured and shown, but does not currently scale workout difficulty — e.g. a +20 key wipe and a +2 key wipe are weighted identically right now. A future version could factor `keystoneLevel` directly into `CalculateTier()`.
 - **Boss health snapshot is instantaneous, not sustained.** Health is read the moment `BigWigs_OnBossWipe` fires, via the live `bossN` unit tokens. In fast-decaying multi-boss encounters this is generally accurate, but it reflects whatever health values are visible at that exact tick, not an average over the pull.
 - **Account-wide, not per-character** SavedVariables, so alts share one running total unless you `/wt reset` between characters.
-- **Single-window UI**, non-resizable, no drag-to-edge snapping — functional, not fancy.
+- **Window is resizable** (drag the bottom-right corner grip) between 320x420 and 900x900, size persists across sessions. No drag-to-edge snapping — functional, not fancy.
 - **`BigWigs_OnBossEngage` is currently a no-op** beyond capturing the boss name — reserved for a future per-pull attempt counter.
 
 ## Troubleshooting
@@ -226,6 +228,7 @@ This is expected outside of an active Mythic+ run — `C_ChallengeMode.GetActive
 
 | Version | Notes |
 |---|---|
+| **1.2.0** | Made the UI window resizable: drag the bottom-right corner grip to resize between 320x420 and 900x900 (`SetResizeBounds`, the current API since Dragonflight 10.0.0, replacing the older `SetMinResize`/`SetMaxResize`). Size persists to SavedVariables (`frameWidth`/`frameHeight`) and is restored on next login/reload. Wrap-width text elements (last-wipe detail, boss-mod status footer) now reflow to the frame's actual width via `OnSizeChanged` instead of a hardcoded 400px. |
 | **1.1.3** | Fixed death tracking still missing deaths after v1.1.2 (confirmed live: a fall-damage death in the open world wasn't counted, though `/wt death` proved the counter/UI itself was fine). Dropped event-based death detection entirely — no more `PLAYER_DEAD`/`UNIT_DIED`/combat log dependency of any kind. Now polls `UnitIsDeadOrGhost("player")` on an OnUpdate timer (0.2s interval) and counts a death on the false->true transition, with `wasDead` seeded correctly at load so a `/reload` while already dead doesn't double-count. Sidesteps the entire class of "which death-cause events does this patch actually fire" uncertainty that broke the two previous approaches. |
 | **1.1.2** | Fixed death tracking still not firing live in-game after v1.1.1: replaced `UNIT_DIED` + `UnitGUID("player")` comparison with the `PLAYER_DEAD` event, which fires exclusively for the player's own death with no payload and no GUID comparison. Avoids a suspected interaction with Patch 12.0.0's "secret value" restrictions on unit identity inside active Mythic+ instances, which can silently break naive GUID equality checks. |
 | **1.1.1** | Fixed broken auto death tracking: Patch 12.0.0 removed addon access to `COMBAT_LOG_EVENT_UNFILTERED` entirely, which the old death-detection path relied on. Replaced with the new `UNIT_DIED` frame event (registered directly, no combat log parsing needed) per Blizzard's documented replacement. Removed the now-dead `HandleCombatLog()`/`CombatLogGetCurrentEventInfo()` code path. |

@@ -234,6 +234,16 @@ This is expected outside of an active Mythic+ run — `C_ChallengeMode.GetActive
 | **1.0.1** | Bumped Interface to `120100` for WoW 12.1 (Midnight) compatibility. |
 | **1.0.0** | Initial release — death tracking, tier calculation, UI window, slash commands. |
 
+## Releasing
+
+**The release zip filename MUST include the version number** (e.g. `WoW-WorkoutTracker-1.1.4.zip`, not `WoW-WorkoutTracker.zip`). WowUp-CF's GitHub provider uses the release asset's filename as part of its version-identity check when deciding whether an update is available. Every release through v1.1.3 shipped an identically-named `WoW-WorkoutTracker.zip` asset, which meant WowUp-CF saw `installedVersion == latestVersion` (both literally the string `"WoW-WorkoutTracker.zip"`) and silently never flagged or installed any update from v1.0.2 onward — despite the GitHub tag, changelog, and code all being current. Confirmed via WowUp-CF's own `addons.json`/log: `installedVersion` and `latestVersion` were both `"WoW-WorkoutTracker.zip"` while `downloadUrl` (asset ID) had actually changed underneath it.
+
+Steps to cut a release:
+1. Bump `.toc` `## Version:`
+2. Tag: `git tag -a vX.Y.Z -m "..."` and `git push origin vX.Y.Z`
+3. Build the zip with the addon folder at zip root (per `.pkgmeta`'s `package-as`), named `WoW-WorkoutTracker-X.Y.Z.zip` — **never the bare, unversioned name**
+4. `gh release create vX.Y.Z path/to/WoW-WorkoutTracker-X.Y.Z.zip --title vX.Y.Z --notes "..."`
+
 ## Contributing
 
 Issues and PRs welcome. If you're adding a feature, keep the zero-hard-dependency philosophy — BigWigs/LittleWigs integration is soft/optional by design, and this addon should stay small enough to audit in one sitting. Bug reports should include your WoW build number (`/dump GetBuildInfo()`), whether BigWigs/LittleWigs is installed, and, if it's a Lua error, the full `!BugGrabber`/`BugSack` trace if you have one installed.

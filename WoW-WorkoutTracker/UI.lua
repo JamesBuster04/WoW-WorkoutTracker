@@ -1,7 +1,7 @@
 local addon = _G["WorkoutTracker"]
 
 function addon:CreateUI()
-    local f = CreateFrame("Frame", "WorkoutTrackerFrame", UIParent)
+    local f = CreateFrame("Frame", "WorkoutTrackerFrame", UIParent, "BackdropTemplate")
     f:SetSize(400, 500)
     f:SetPoint("CENTER")
     f:SetBackdrop({

@@ -1,7 +1,7 @@
 ## Interface: 120100
 ## Title: WoW Workout Tracker
 ## Author: JamesBuster
-## Version: 1.0.1
+## Version: 1.0.2
 ## Notes: Auto-track deaths in Mythic+ dungeons and calculate workout tiers
 ## SavedVariables: WorkoutTrackerDB
 

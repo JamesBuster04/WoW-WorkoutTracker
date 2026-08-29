@@ -1,6 +1,12 @@
 package-as: WoW-WorkoutTracker
-
 enable-nolib-creation: no
 
-relations:
-  # No external dependencies
+changelog-title: WoW Workout Tracker
+changelog-url: https://github.com/JamesBuster04/WoW-WorkoutTracker/releases
+manual-changelog:
+  v1.0.0: |
+    Initial Release
+    - Auto-track deaths
+    - Calculate workout tiers
+    - In-game UI window
+    - Slash commands

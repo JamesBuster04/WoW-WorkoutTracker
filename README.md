@@ -92,7 +92,7 @@ The addon tracks silently in the background from login. No setup required.
 | `/wt stats` | Print dungeon, keystone level, deaths, wipes, and tier to chat |
 | `/wt reset` | Zero out the session — run this before pulling a new key |
 
-**Recommended flow:** `/wt reset` right before you accept the Mythic+ ready check, then let it run. Deaths are picked up automatically via `PLAYER_DEAD`. If BigWigs/LittleWigs is installed, boss wipes are picked up automatically too — you shouldn't need `/wt death` or `/wt wipe` unless you're debugging or running without a boss mod.
+**Recommended flow:** `/wt reset` right before you accept the Mythic+ ready check, then let it run. Deaths are picked up automatically by polling your own alive/dead state twice a second. If BigWigs/LittleWigs is installed, boss wipes are picked up automatically too — you shouldn't need `/wt death` or `/wt wipe` unless you're debugging or running without a boss mod.
 
 ## Tier System
 
@@ -156,7 +156,7 @@ ADDON_LOADED                → initialize WorkoutTrackerDB, call InitBossModInt
 PLAYER_ENTERING_WORLD       → capture instance name via GetInstanceInfo()
                              → capture keystone level via C_ChallengeMode.GetActiveKeystoneInfo()
 CHALLENGE_MODE_START        → re-capture keystone level (key freshly started)
-PLAYER_DEAD                 → fired when the player dies (no payload needed)
+(polled every 0.2s)        → UnitIsDeadOrGhost("player") flips false->true
                              → AddDeath() → tier recalculation → UI:Update()
 
 [If BigWigsLoader is present at ADDON_LOADED time:]
@@ -217,7 +217,7 @@ Check the UI window's footer status line, or run `/wt stats` and look for the no
 The `.toc` Interface number doesn't match your client build closely enough. Enable **Load out of date AddOns** in the AddOns menu, or wait for a `.toc` bump matching your patch.
 
 **Deaths not incrementing automatically**
-As of v1.1.2, death detection uses the `PLAYER_DEAD` event (fires exclusively for your own death, no payload/GUID comparison needed). v1.1.1's `UNIT_DIED` + `UnitGUID("player")` approach could silently fail inside active Mythic+ instances because Patch 12.0.0 also introduced "secret values" for unit identity in restricted contexts, which can break naive GUID equality checks — `PLAYER_DEAD` sidesteps that entirely. Confirm you're on v1.1.2+.
+As of v1.1.3, death detection no longer depends on any Blizzard death-notification event at all — it polls `UnitIsDeadOrGhost("player")` every 0.2s and counts a death on the false→true transition. This was a deliberate move away from events after `PLAYER_DEAD` (v1.1.2) missed a real fall-damage death in live testing, and there's no combat log access left post-12.0.0 to cross-check which death-cause events Blizzard does or doesn't fire consistently. Reading our own unit's live state instead of reacting to a notification sidesteps that whole class of problem. Confirm you're on v1.1.3+. If it's still not counting, run `/wt death` to confirm the counter/UI itself works (isolates a display bug from a detection bug) and check for Lua errors with BugSack/BugGrabber.
 
 **Keystone level shows as "none active"**
 This is expected outside of an active Mythic+ run — `C_ChallengeMode.GetActiveKeystoneInfo()` only returns a level once a key has been inserted and the timer started (`CHALLENGE_MODE_START`).
@@ -226,6 +226,7 @@ This is expected outside of an active Mythic+ run — `C_ChallengeMode.GetActive
 
 | Version | Notes |
 |---|---|
+| **1.1.3** | Fixed death tracking still missing deaths after v1.1.2 (confirmed live: a fall-damage death in the open world wasn't counted, though `/wt death` proved the counter/UI itself was fine). Dropped event-based death detection entirely — no more `PLAYER_DEAD`/`UNIT_DIED`/combat log dependency of any kind. Now polls `UnitIsDeadOrGhost("player")` on an OnUpdate timer (0.2s interval) and counts a death on the false->true transition, with `wasDead` seeded correctly at load so a `/reload` while already dead doesn't double-count. Sidesteps the entire class of "which death-cause events does this patch actually fire" uncertainty that broke the two previous approaches. |
 | **1.1.2** | Fixed death tracking still not firing live in-game after v1.1.1: replaced `UNIT_DIED` + `UnitGUID("player")` comparison with the `PLAYER_DEAD` event, which fires exclusively for the player's own death with no payload and no GUID comparison. Avoids a suspected interaction with Patch 12.0.0's "secret value" restrictions on unit identity inside active Mythic+ instances, which can silently break naive GUID equality checks. |
 | **1.1.1** | Fixed broken auto death tracking: Patch 12.0.0 removed addon access to `COMBAT_LOG_EVENT_UNFILTERED` entirely, which the old death-detection path relied on. Replaced with the new `UNIT_DIED` frame event (registered directly, no combat log parsing needed) per Blizzard's documented replacement. Removed the now-dead `HandleCombatLog()`/`CombatLogGetCurrentEventInfo()` code path. |
 | **1.1.0** | Added optional BigWigs/LittleWigs integration for automatic party-wide boss wipe detection (`BigWigs_OnBossWipe` via `BigWigsLoader.RegisterMessage`), with boss health read independently via stable `bossN` unit tokens. Added Mythic+ keystone level tracking via `C_ChallengeMode.GetActiveKeystoneInfo()`. Tier calculation now weighs boss wipes at 3x a personal death. UI updated to show keystone level, boss wipe count, last-wipe detail, and integration status. |

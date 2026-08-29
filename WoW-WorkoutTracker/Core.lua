@@ -86,6 +86,9 @@ function addon:OnEvent(event, ...)
         end
         print("|cff00ff00WoW Workout Tracker|r loaded! Type |cff00ff00/wt|r for commands.")
         self:InitBossModIntegration()
+        -- Seed wasDead to current state so a /reload while already dead
+        -- (e.g. sitting at the release-spirit screen) doesn't double-count.
+        self.wasDead = UnitIsDeadOrGhost("player")
     elseif event == "PLAYER_ENTERING_WORLD" then
         local dungeonName, _, _, _, _, _, _, dungeonID = GetInstanceInfo()
         if dungeonID and dungeonID > 0 then
@@ -94,9 +97,27 @@ function addon:OnEvent(event, ...)
         self:RefreshKeystoneInfo()
     elseif event == "CHALLENGE_MODE_START" then
         self:RefreshKeystoneInfo()
-    elseif event == "PLAYER_DEAD" then
+    end
+end
+
+-- Death detection: poll UnitIsDeadOrGhost("player") instead of trusting any
+-- single Blizzard event. PLAYER_DEAD (and UNIT_DIED before it) missed a
+-- real fall-damage death in testing - with no combat log access left to
+-- cross-check against post-12.0.0, there's no reliable way to know which
+-- death-cause events Blizzard does/doesn't fire consistently. Reading our
+-- own unit's live state instead of reacting to a notification sidesteps
+-- that whole class of problem: it can't "miss" an event because there's
+-- no event to miss, and UnitIsDeadOrGhost("player") is our own unit, never
+-- secret/restricted like other units' GUIDs can be.
+local DEATH_POLL_INTERVAL = 0.2
+local pollElapsed = 0
+
+function addon:CheckDeathState()
+    local isDead = UnitIsDeadOrGhost("player")
+    if isDead and not self.wasDead then
         self:AddDeath()
     end
+    self.wasDead = isDead
 end
 
 function addon:RefreshKeystoneInfo()
@@ -276,10 +297,17 @@ end
 
 addon:RegisterEvent("ADDON_LOADED")
 addon:RegisterEvent("PLAYER_ENTERING_WORLD")
-addon:RegisterEvent("PLAYER_DEAD")
 addon:RegisterEvent("CHALLENGE_MODE_START")
 addon:SetScript("OnEvent", function(self, event, ...)
     addon:OnEvent(event, ...)
+end)
+
+addon:SetScript("OnUpdate", function(self, elapsed)
+    pollElapsed = pollElapsed + elapsed
+    if pollElapsed >= DEATH_POLL_INTERVAL then
+        pollElapsed = 0
+        self:CheckDeathState()
+    end
 end)
 
 SLASH_WT1 = "/wt"

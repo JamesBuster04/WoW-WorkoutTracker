@@ -1,0 +1,1 @@
+-- Event handlers are in Core.lua for simplicity

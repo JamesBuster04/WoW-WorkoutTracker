@@ -1,0 +1,6 @@
+package-as: WoW-WorkoutTracker
+
+enable-nolib-creation: no
+
+relations:
+  # No external dependencies

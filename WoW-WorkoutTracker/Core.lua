@@ -94,11 +94,8 @@ function addon:OnEvent(event, ...)
         self:RefreshKeystoneInfo()
     elseif event == "CHALLENGE_MODE_START" then
         self:RefreshKeystoneInfo()
-    elseif event == "UNIT_DIED" then
-        local unitGUID = ...
-        if unitGUID == UnitGUID("player") then
-            self:AddDeath()
-        end
+    elseif event == "PLAYER_DEAD" then
+        self:AddDeath()
     end
 end
 
@@ -279,7 +276,7 @@ end
 
 addon:RegisterEvent("ADDON_LOADED")
 addon:RegisterEvent("PLAYER_ENTERING_WORLD")
-addon:RegisterEvent("UNIT_DIED")
+addon:RegisterEvent("PLAYER_DEAD")
 addon:RegisterEvent("CHALLENGE_MODE_START")
 addon:SetScript("OnEvent", function(self, event, ...)
     addon:OnEvent(event, ...)

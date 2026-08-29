@@ -94,8 +94,11 @@ function addon:OnEvent(event, ...)
         self:RefreshKeystoneInfo()
     elseif event == "CHALLENGE_MODE_START" then
         self:RefreshKeystoneInfo()
-    elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        self:HandleCombatLog()
+    elseif event == "UNIT_DIED" then
+        local unitGUID = ...
+        if unitGUID == UnitGUID("player") then
+            self:AddDeath()
+        end
     end
 end
 
@@ -110,14 +113,6 @@ function addon:RefreshKeystoneInfo()
         if self.mainFrame then
             self.mainFrame:Update()
         end
-    end
-end
-
-function addon:HandleCombatLog()
-    local _, event, _, _, _, _, _, destGUID, destName = CombatLogGetCurrentEventInfo()
-
-    if event == "UNIT_DIED" and destGUID == UnitGUID("player") then
-        self:AddDeath()
     end
 end
 
@@ -284,7 +279,7 @@ end
 
 addon:RegisterEvent("ADDON_LOADED")
 addon:RegisterEvent("PLAYER_ENTERING_WORLD")
-addon:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+addon:RegisterEvent("UNIT_DIED")
 addon:RegisterEvent("CHALLENGE_MODE_START")
 addon:SetScript("OnEvent", function(self, event, ...)
     addon:OnEvent(event, ...)

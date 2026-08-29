@@ -156,7 +156,7 @@ ADDON_LOADED                → initialize WorkoutTrackerDB, call InitBossModInt
 PLAYER_ENTERING_WORLD       → capture instance name via GetInstanceInfo()
                              → capture keystone level via C_ChallengeMode.GetActiveKeystoneInfo()
 CHALLENGE_MODE_START        → re-capture keystone level (key freshly started)
-COMBAT_LOG_EVENT_UNFILTERED → filter for UNIT_DIED where destGUID == UnitGUID("player")
+UNIT_DIED                   → frame event fires with unitGUID; if it matches UnitGUID("player")
                              → AddDeath() → tier recalculation → UI:Update()
 
 [If BigWigsLoader is present at ADDON_LOADED time:]
@@ -217,7 +217,7 @@ Check the UI window's footer status line, or run `/wt stats` and look for the no
 The `.toc` Interface number doesn't match your client build closely enough. Enable **Load out of date AddOns** in the AddOns menu, or wait for a `.toc` bump matching your patch.
 
 **Deaths not incrementing automatically**
-Verify combat log filtering isn't blocked by another addon overriding `COMBAT_LOG_EVENT_UNFILTERED` globally (rare), and confirm you're actually the one dying — `destGUID` is matched against `UnitGUID("player")` specifically, not party members.
+As of v1.1.1, death detection uses the `UNIT_DIED` frame event (Blizzard removed addon access to `COMBAT_LOG_EVENT_UNFILTERED` in Patch 12.0.0, which broke this on earlier versions). Confirm you're on v1.1.1+, and that you're actually the one dying — the event's `unitGUID` is matched against `UnitGUID("player")` specifically, not party members.
 
 **Keystone level shows as "none active"**
 This is expected outside of an active Mythic+ run — `C_ChallengeMode.GetActiveKeystoneInfo()` only returns a level once a key has been inserted and the timer started (`CHALLENGE_MODE_START`).
@@ -226,6 +226,7 @@ This is expected outside of an active Mythic+ run — `C_ChallengeMode.GetActive
 
 | Version | Notes |
 |---|---|
+| **1.1.1** | Fixed broken auto death tracking: Patch 12.0.0 removed addon access to `COMBAT_LOG_EVENT_UNFILTERED` entirely, which the old death-detection path relied on. Replaced with the new `UNIT_DIED` frame event (registered directly, no combat log parsing needed) per Blizzard's documented replacement. Removed the now-dead `HandleCombatLog()`/`CombatLogGetCurrentEventInfo()` code path. |
 | **1.1.0** | Added optional BigWigs/LittleWigs integration for automatic party-wide boss wipe detection (`BigWigs_OnBossWipe` via `BigWigsLoader.RegisterMessage`), with boss health read independently via stable `bossN` unit tokens. Added Mythic+ keystone level tracking via `C_ChallengeMode.GetActiveKeystoneInfo()`. Tier calculation now weighs boss wipes at 3x a personal death. UI updated to show keystone level, boss wipe count, last-wipe detail, and integration status. |
 | **1.0.2** | Fixed `SetBackdrop` failing on modern clients — added `BackdropTemplate` mixin to `CreateFrame` call. Verified against WoW 12.1 (Interface `120100`). |
 | **1.0.1** | Bumped Interface to `120100` for WoW 12.1 (Midnight) compatibility. |
